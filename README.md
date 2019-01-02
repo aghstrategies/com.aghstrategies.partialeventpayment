@@ -1,44 +1,10 @@
 # com.aghstrategies.partialeventpayment
 
-![Screenshot](/images/screenshot.png)
+1. Adds two fields to the Price Option Form:
+ - An installments field checkbox
+ - A Select for "Which full price option does this field refer to?"  These fields are used to create price fields with an option to pay the whole amount up front or put down a deposit. See Screenshot below:  
+![Screenshot of Price Option custom fields](./img/installmentsField.png)  
 
-(*FIXME: In one or two paragraphs, describe what the extension does and why one would download it. *)
+2. On event Registration forms using price sets for which partial payments have been configured (on the price options), creates a partially paid registration if the partial payment option is selected.
 
-The extension is licensed under [AGPL-3.0](LICENSE.txt).
-
-## Requirements
-
-* PHP v5.4+
-* CiviCRM (*FIXME: Version number*)
-
-## Installation (Web UI)
-
-This extension has not yet been published for installation via the web UI.
-
-## Installation (CLI, Zip)
-
-Sysadmins and developers may download the `.zip` file for this extension and
-install it with the command-line tool [cv](https://github.com/civicrm/cv).
-
-```bash
-cd <extension-dir>
-cv dl com.aghstrategies.partialeventpayment@https://github.com/FIXME/com.aghstrategies.partialeventpayment/archive/master.zip
-```
-
-## Installation (CLI, Git)
-
-Sysadmins and developers may clone the [Git](https://en.wikipedia.org/wiki/Git) repo for this extension and
-install it with the command-line tool [cv](https://github.com/civicrm/cv).
-
-```bash
-git clone https://github.com/FIXME/com.aghstrategies.partialeventpayment.git
-cv en partialeventpayment
-```
-
-## Usage
-
-(* FIXME: Where would a new user navigate to get started? What changes would they see? *)
-
-## Known Issues
-
-(* FIXME *)
+Abstracted from [warriorpartialevents](https://git.aghstrategies.com/clients/weekend-warriors/warriorpartialevents)
