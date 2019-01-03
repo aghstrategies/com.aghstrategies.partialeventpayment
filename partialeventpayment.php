@@ -126,7 +126,7 @@ function partialeventpayment_civicrm_postProcess($formName, $form) {
                 $lineParams = array(
                   'sequential' => 1,
                   'entity_id' => $participantID,
-                  'entity_table' => $label['entity_table'],
+                  'entity_table' => 'civicrm_participant',
                   'id' => $id,
                   'label' => $refInfo['label'],
                   'unit_price' => $unit_price,
@@ -134,7 +134,6 @@ function partialeventpayment_civicrm_postProcess($formName, $form) {
                   'line_total' => $total,
                   'qty' => $lineItem['qty'],
                   'price_field_id' => $lineItem['price_field_id'],
-                  'contribution_id' => $label['contribution_id'],
                 );
                 $updateLineItem = civicrm_api3('LineItem', 'create', $lineParams);
                 /*2. change the civicrm_financial_item row to */
@@ -163,8 +162,8 @@ function partialeventpayment_civicrm_postProcess($formName, $form) {
                 $date = $checkDAO->trxn_date;
                 $updateSQL = "UPDATE civicrm_financial_trxn SET from_financial_account_id = {$ar}, to_financial_account_id = 8 WHERE trxn_id = '{$trxn}' AND total_amount <> 1.50";
                 $updateDAO = CRM_Core_DAO::executeQuery($updateSQL);
-                $dealWithTestFee = "UPDATE civicrm_financial_trxn SET from_financial_account_id = {$ar}, to_financial_account_id = {$ar} WHERE trxn_id = '{$trxn}' AND total_amount = 1.50";
-                $testFee = CRM_Core_DAO::executeQuery($dealWithTestFee);
+                // $dealWithTestFee = "UPDATE civicrm_financial_trxn SET from_financial_account_id = {$ar}, to_financial_account_id = {$ar} WHERE trxn_id = '{$trxn}' AND total_amount = 1.50";
+                // $testFee = CRM_Core_DAO::executeQuery($dealWithTestFee);
                 if ($updateDAO->affectedRows()) {
                   $insertSQL = "
 						  	    INSERT into civicrm_financial_trxn (trxn_date, total_amount, currency, from_financial_account_id, to_financial_account_id, status_id, payment_instrument_id)
