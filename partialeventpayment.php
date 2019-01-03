@@ -23,7 +23,8 @@ function partialeventpayment_civicrm_buildForm($formName, $form) {
     }
     $form->add('select', "priceFieldSelect", ts('Which full price option does this field refer to?'), $priceFieldSelect);
     $templatePath = realpath(dirname(__FILE__) . "/templates");
-    CRM_Core_Region::instance('page-body')->add(array('template' => "{$templatePath}/priceOption.tpl"));
+    CRM_Core_Region::instance('form-body')->add(array('template' => "{$templatePath}/priceOption.tpl"));
+    CRM_Core_Resources::singleton()->addScriptFile('com.aghstrategies.partialeventpayment', 'js/priceOption.js');
 
     //set defaults
     if ($oid = $form->getVar('_oid')) {
