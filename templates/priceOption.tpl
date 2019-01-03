@@ -1,6 +1,6 @@
 {* template block that contains the new field *}
 <table id="installments" class="form-layout">
-	<tr class="crm-section price_set-section">
+	<tr class="price_set-section">
 	  <td class="label">{$form.install_check.label}</td>
 	  <td>{$form.install_check.html}</td>
 	</tr>
