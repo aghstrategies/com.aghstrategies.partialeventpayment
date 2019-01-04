@@ -13,10 +13,19 @@ function partialeventpayment_civicrm_buildForm($formName, $form) {
     $form->add('checkbox', 'install_check', ts("Installments Field?"));
     $priceFieldSelect = array();
     $priceID = $form->getVar('_fid');
-    $result = civicrm_api3('PriceFieldValue', 'get', array(
-      'sequential' => 1,
-      'price_field_id' => $priceID,
-    ));
+    try {
+      $result = civicrm_api3('PriceFieldValue', 'get', array(
+        'sequential' => 1,
+        'price_field_id' => $priceID,
+      ));
+    }
+    catch (CiviCRM_API3_Exception $e) {
+      $error = $e->getMessage();
+      CRM_Core_Error::debug_log_message(ts('API Error %1', array(
+        'domain' => 'com.aghstrategies.partialeventpayment',
+        1 => $error,
+      )));
+    }
 
     foreach ($result['values'] as $field) {
       $priceFieldSelect[$field['id']] = $field['label'];
@@ -73,8 +82,9 @@ function partialeventpayment_civicrm_postProcess($formName, $form) {
   //end price option form
 
   if ($formName == "CRM_Event_Form_Registration_Confirm") {
+    // get id for partially paid participant status
     try {
-      $partiallyPaidStatus = civicrm_api3('ParticipantStatusType', 'getsingle', [
+      $partiallyPaidPartStatus = civicrm_api3('ParticipantStatusType', 'getsingle', [
         'return' => ["id"],
         'label' => "Partially Paid",
       ]);
@@ -86,6 +96,23 @@ function partialeventpayment_civicrm_postProcess($formName, $form) {
         1 => $error,
       )));
     }
+
+    // get id for partially paid contribution status
+    try {
+      $partiallyPaidContribStatus = civicrm_api3('OptionGroup', 'getsingle', [
+        'name' => "contribution_status",
+        'api.OptionValue.getsingle' => ['option_group_id' => "\$value.id", 'name' => "Partially paid"],
+      ]);
+    }
+    catch (CiviCRM_API3_Exception $e) {
+      $error = $e->getMessage();
+      CRM_Core_Error::debug_log_message(ts('API Error %1', array(
+        'domain' => 'com.aghstrategies.partialeventpayment',
+        1 => $error,
+      )));
+    }
+    $partiallyPaidContribStatus = $partiallyPaidContribStatus['api.OptionValue.getsingle']['value'];
+
     $params = $form->getVar('_params');
     $lineItem = $form->getVar('_lineItem');
     $pfidArray = array();
@@ -177,11 +204,24 @@ function partialeventpayment_civicrm_postProcess($formName, $form) {
                   'qty' => $lineItem['qty'],
                   'price_field_id' => $lineItem['price_field_id'],
                 );
-                $updateLineItem = civicrm_api3('LineItem', 'create', $lineParams);
+                try {
+                  $updateLineItem = civicrm_api3('LineItem', 'create', $lineParams);
+                }
+                catch (CiviCRM_API3_Exception $e) {
+                  $error = $e->getMessage();
+                  CRM_Core_Error::debug_log_message(ts('API Error %1', array(
+                    'domain' => 'com.aghstrategies.partialeventpayment',
+                    1 => $error,
+                  )));
+                }
                 /*2. change the civicrm_financial_item row to */
                 $refLabel = $refInfo['label'];
                 $refAmount = $refInfo['amount'];
-                $sql = "UPDATE civicrm_financial_item SET description = '{$refLabel}', amount = {$refAmount}, status_id = 2 WHERE entity_id = {$id}";
+
+                //TODO get this thru the API in case it varies system to system
+                $paymentStatusId = 2;
+
+                $sql = "UPDATE civicrm_financial_item SET description = '{$refLabel}', amount = {$refAmount}, status_id = {$paymentStatusId} WHERE entity_id = {$id}";
                 $dao = CRM_Core_DAO::executeQuery($sql);
                 //update total
                 $newTotal = $newTotal + $total;
@@ -193,7 +233,26 @@ function partialeventpayment_civicrm_postProcess($formName, $form) {
             //end of inner lineitem foreach
 
             /* 3. change the civicrm_financial_trxn row to have from_financial_account_id = the A/R account*/
-            $accounts = civicrm_api3('FinancialAccount', 'getsingle', array('sequential' => 1, 'name' => "Accounts Receivable"));
+            try {
+              $accounts = civicrm_api3('FinancialAccount', 'getsingle', array('sequential' => 1, 'name' => "Accounts Receivable"));
+            }
+            catch (CiviCRM_API3_Exception $e) {
+              $error = $e->getMessage();
+              CRM_Core_Error::debug_log_message(ts('API Error %1', array(
+                'domain' => 'com.aghstrategies.partialeventpayment',
+                1 => $error,
+              )));
+            }
+            try {
+              $bankingFees = civicrm_api3('FinancialAccount', 'getsingle', array('sequential' => 1, 'name' => "Banking Fees"));
+            }
+            catch (CiviCRM_API3_Exception $e) {
+              $error = $e->getMessage();
+              CRM_Core_Error::debug_log_message(ts('API Error %1', array(
+                'domain' => 'com.aghstrategies.partialeventpayment',
+                1 => $error,
+              )));
+            }
             $ar = $accounts['id'];
             $newTotal = number_format($newTotal, 2);
             $trxn = $contribution['trxn_id'];
@@ -202,10 +261,10 @@ function partialeventpayment_civicrm_postProcess($formName, $form) {
               $checkDAO = CRM_Core_DAO::executeQuery($checkSQL);
               if ($checkDAO->fetch()) {
                 $date = $checkDAO->trxn_date;
-                $updateSQL = "UPDATE civicrm_financial_trxn SET from_financial_account_id = {$ar}, to_financial_account_id = 8 WHERE trxn_id = '{$trxn}' AND total_amount <> 1.50";
+                $updateSQL = "UPDATE civicrm_financial_trxn SET from_financial_account_id = {$ar}, to_financial_account_id = {$bankingFees['id']} WHERE trxn_id = '{$trxn}' AND total_amount <> 1.50";
                 $updateDAO = CRM_Core_DAO::executeQuery($updateSQL);
-                // $dealWithTestFee = "UPDATE civicrm_financial_trxn SET from_financial_account_id = {$ar}, to_financial_account_id = {$ar} WHERE trxn_id = '{$trxn}' AND total_amount = 1.50";
-                // $testFee = CRM_Core_DAO::executeQuery($dealWithTestFee);
+                $dealWithTestFee = "UPDATE civicrm_financial_trxn SET from_financial_account_id = {$ar}, to_financial_account_id = {$ar} WHERE trxn_id = '{$trxn}' AND total_amount = 1.50";
+                $testFee = CRM_Core_DAO::executeQuery($dealWithTestFee);
                 if ($updateDAO->affectedRows()) {
                   $insertSQL = "
 						  	    INSERT into civicrm_financial_trxn (trxn_date, total_amount, currency, from_financial_account_id, to_financial_account_id, status_id, payment_instrument_id)
@@ -223,7 +282,7 @@ function partialeventpayment_civicrm_postProcess($formName, $form) {
               $newLevel = str_replace($pfidInfo['label'], $refInfo['label'], $oldLevel);
               $sql = "
 							  UPDATE civicrm_contribution
-							  SET contribution_status_id = 8,
+							  SET contribution_status_id = $partiallyPaidContribStatus,
 							    receive_date = CURDATE(),
 							    amount_level = '{$newLevel}',
                   net_amount = $newTotal,
@@ -236,10 +295,19 @@ function partialeventpayment_civicrm_postProcess($formName, $form) {
             $participantParams = array(
               'sequential' => '1',
               'id' => $participantID,
-              "status_id" => $partiallyPaidStatus['id'],
+              "status_id" => $partiallyPaidPartStatus['id'],
               "participant_fee_amount" => $newTotal,
             );
-            $updateParticipant = civicrm_api3('Participant', 'create', $participantParams);
+            try {
+              $updateParticipant = civicrm_api3('Participant', 'create', $participantParams);
+            }
+            catch (CiviCRM_API3_Exception $e) {
+              $error = $e->getMessage();
+              CRM_Core_Error::debug_log_message(ts('API Error %1', array(
+                'domain' => 'com.aghstrategies.partialeventpayment',
+                1 => $error,
+              )));
+            }
           } //end of if reference exists
         } //end of DAO fetch
       } //end of K and V foreach
