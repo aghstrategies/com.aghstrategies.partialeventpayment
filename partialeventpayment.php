@@ -79,8 +79,12 @@ function partialeventpayment_civicrm_postProcess($formName, $form) {
         'label' => "Partially Paid",
       ]);
     }
-    catch (\Exception $e) {
-
+    catch (CiviCRM_API3_Exception $e) {
+      $error = $e->getMessage();
+      CRM_Core_Error::debug_log_message(ts('API Error %1', array(
+        'domain' => 'com.aghstrategies.partialeventpayment',
+        1 => $error,
+      )));
     }
     $params = $form->getVar('_params');
     $lineItem = $form->getVar('_lineItem');
@@ -94,25 +98,64 @@ function partialeventpayment_civicrm_postProcess($formName, $form) {
           if ($refID = $dao->reference) {
             $participantID = $form->getVar('_participantId');
             //get referenced price field Info
-            $refInfo = civicrm_api3('PriceFieldValue', 'getsingle', array(
-              'sequential' => 1,
-              'id' => $refID,
-            ));
+            try {
+              $refInfo = civicrm_api3('PriceFieldValue', 'getsingle', array(
+                'sequential' => 1,
+                'id' => $refID,
+              ));
+            }
+            catch (CiviCRM_API3_Exception $e) {
+              $error = $e->getMessage();
+              CRM_Core_Error::debug_log_message(ts('API Error %1', array(
+                'domain' => 'com.aghstrategies.partialeventpayment',
+                1 => $error,
+              )));
+            }
             //get current pfid info
-            $pfidInfo = civicrm_api3('PriceFieldValue', 'getsingle', array(
-              'sequential' => 1,
-              'id' => $pfid,
-            ));
+            try {
+              $pfidInfo = civicrm_api3('PriceFieldValue', 'getsingle', array(
+                'sequential' => 1,
+                'id' => $pfid,
+              ));
+            }
+            catch (CiviCRM_API3_Exception $e) {
+              $error = $e->getMessage();
+              CRM_Core_Error::debug_log_message(ts('API Error %1', array(
+                'domain' => 'com.aghstrategies.partialeventpayment',
+                1 => $error,
+              )));
+            }
+
             //get contribution info
-            $contribution = civicrm_api3('Contribution', 'getsingle', array(
-              'sequential' => 1,
-              'id' => $params['contributionID'],
-            ));
+            try {
+              $contribution = civicrm_api3('Contribution', 'getsingle', array(
+                'sequential' => 1,
+                'id' => $params['contributionID'],
+              ));
+            }
+            catch (CiviCRM_API3_Exception $e) {
+              $error = $e->getMessage();
+              CRM_Core_Error::debug_log_message(ts('API Error %1', array(
+                'domain' => 'com.aghstrategies.partialeventpayment',
+                1 => $error,
+              )));
+            }
+
             //get all lineitems for this participant
-            $lineItems = civicrm_api3('LineItem', 'get', array(
-              'sequential' => 1,
-              'entity_id' => $participantID,
-            ));
+            try {
+              $lineItems = civicrm_api3('LineItem', 'get', array(
+                'sequential' => 1,
+                'entity_id' => $participantID,
+                'entity_table' => 'civicrm_participant',
+              ));
+            }
+            catch (CiviCRM_API3_Exception $e) {
+              $error = $e->getMessage();
+              CRM_Core_Error::debug_log_message(ts('API Error %1', array(
+                'domain' => 'com.aghstrategies.partialeventpayment',
+                1 => $error,
+              )));
+            }
             // loop through all line items and only fix those who have installment price field
             $newTotal = 0;
             foreach ($lineItems['values'] as $lineItem) {
@@ -126,7 +169,6 @@ function partialeventpayment_civicrm_postProcess($formName, $form) {
                 $lineParams = array(
                   'sequential' => 1,
                   'entity_id' => $participantID,
-                  'entity_table' => 'civicrm_participant',
                   'id' => $id,
                   'label' => $refInfo['label'],
                   'unit_price' => $unit_price,
