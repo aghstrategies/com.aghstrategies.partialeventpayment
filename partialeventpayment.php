@@ -191,8 +191,8 @@ function partialeventpayment_civicrm_postProcess($formName, $form) {
                 /*1. change the civicrm_line_item row to have*/
                 $id = $lineItem['id'];
                 $unit_price = number_format(($refInfo['amount']), 2);
-                $total = $lineItem['qty'] * $unit_price;
-                $total = number_format($total, 2);
+                $total = $lineItem['qty'] * $refInfo['amount'];
+                $totalFormatted = number_format($total, 2);
                 $lineParams = array(
                   'sequential' => 1,
                   'entity_id' => $participantID,
@@ -200,7 +200,7 @@ function partialeventpayment_civicrm_postProcess($formName, $form) {
                   'label' => $refInfo['label'],
                   'unit_price' => $unit_price,
                   'price_field_value_id' => $refInfo['id'],
-                  'line_total' => $total,
+                  'line_total' => $totalFormatted,
                   'qty' => $lineItem['qty'],
                   'price_field_id' => $lineItem['price_field_id'],
                 );
@@ -254,7 +254,7 @@ function partialeventpayment_civicrm_postProcess($formName, $form) {
               )));
             }
             $ar = $accounts['id'];
-            $newTotal = number_format($newTotal, 2);
+            //$newTotal = number_format($newTotal, 2);
             $trxn = $contribution['trxn_id'];
             if ($trxn && $ar && in_array($v['price_field_value_id'], $pfidArray)) {
               $checkSQL = "SELECT trxn_date, payment_instrument_id, currency, status_id FROM civicrm_financial_trxn WHERE trxn_id = '{$trxn}'";
