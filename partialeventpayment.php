@@ -190,9 +190,8 @@ function partialeventpayment_civicrm_postProcess($formName, $form) {
                 $pfidArray[] = $pfid;
                 /*1. change the civicrm_line_item row to have*/
                 $id = $lineItem['id'];
-                $unit_price = number_format(($refInfo['amount']), 2);
+                $unit_price = $refInfo['amount'];
                 $total = $lineItem['qty'] * $refInfo['amount'];
-                $totalFormatted = number_format($total, 2);
                 $lineParams = array(
                   'sequential' => 1,
                   'entity_id' => $participantID,
@@ -200,7 +199,7 @@ function partialeventpayment_civicrm_postProcess($formName, $form) {
                   'label' => $refInfo['label'],
                   'unit_price' => $unit_price,
                   'price_field_value_id' => $refInfo['id'],
-                  'line_total' => $totalFormatted,
+                  'line_total' => $total,
                   'qty' => $lineItem['qty'],
                   'price_field_id' => $lineItem['price_field_id'],
                 );
